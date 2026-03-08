@@ -17,13 +17,9 @@ import {
   Download,
   Maximize2,
   Minimize2,
-  Play,
-  Pause,
-  Volume2,
-  SkipBack,
-  SkipForward,
-  Settings,
 } from "lucide-react";
+import { toast } from "sonner";
+import { fileService } from "@/services/file.service";
 import type { FileItem } from "@/types";
 
 interface PreviewModalProps {
@@ -33,7 +29,19 @@ interface PreviewModalProps {
   files?: FileItem[];
 }
 
-function ImagePreview({ file }: { file: FileItem }) {
+function ImagePreview({ file, signedUrl }: { file: FileItem; signedUrl: string | null }) {
+  if (signedUrl) {
+    return (
+      <div className="w-full rounded-md overflow-hidden bg-muted flex items-center justify-center max-h-72">
+        <img
+          src={signedUrl}
+          alt={file.name}
+          className="max-w-full max-h-72 object-contain"
+          data-testid="preview-image"
+        />
+      </div>
+    );
+  }
   const gradients: Record<string, string> = {
     jpg: "from-rose-400 via-fuchsia-500 to-indigo-500",
     png: "from-emerald-400 via-cyan-500 to-blue-500",
@@ -41,88 +49,40 @@ function ImagePreview({ file }: { file: FileItem }) {
     svg: "from-violet-400 via-purple-500 to-fuchsia-500",
   };
   const gradient = gradients[file.type] || gradients.jpg;
-  const dims = file.type === "svg" ? "512 x 512" : "1920 x 1080";
-
   return (
     <div className={`relative w-full h-72 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-      <div className="absolute inset-0 bg-black/10 rounded-md" />
       <div className="relative text-center text-white">
         <FileIcon type={file.type} size="lg" className="mx-auto mb-2 !text-white" />
         <p className="text-sm font-medium opacity-90">{file.name}</p>
-        <p className="text-xs opacity-70 mt-1">{dims}</p>
       </div>
     </div>
   );
 }
 
-function VideoPreview({ file }: { file: FileItem }) {
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(35);
-
+function VideoPreview({ file, signedUrl }: { file: FileItem; signedUrl: string | null }) {
+  if (signedUrl) {
+    return (
+      <div className="w-full rounded-md overflow-hidden bg-black" data-testid="preview-video">
+        <video
+          src={signedUrl}
+          controls
+          className="w-full max-h-72"
+          data-testid="video-element"
+        />
+      </div>
+    );
+  }
   return (
-    <div className="relative w-full h-72 rounded-md bg-black flex flex-col" data-testid="preview-video">
-      <div className="flex-1 flex items-center justify-center relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
-        <div className="relative text-center">
-          <FileIcon type="mp4" size="lg" className="mx-auto mb-2 !text-gray-400" />
-          <p className="text-sm text-gray-300">{file.name}</p>
-        </div>
-        {!playing && (
-          <button
-            onClick={() => setPlaying(true)}
-            className="absolute inset-0 flex items-center justify-center"
-            data-testid="button-video-play-overlay"
-          >
-            <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover-elevate">
-              <Play className="h-7 w-7 text-white ml-1" />
-            </div>
-          </button>
-        )}
-      </div>
-      <div className="bg-gray-900 px-3 py-2 rounded-b-md space-y-1.5">
-        <div className="w-full h-1 bg-gray-700 rounded-full cursor-pointer" onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          setProgress(Math.round(((e.clientX - rect.left) / rect.width) * 100));
-        }}>
-          <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-white hover:text-white" data-testid="button-video-skip-back">
-              <SkipBack className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-white hover:text-white"
-              onClick={() => setPlaying(!playing)}
-              data-testid="button-video-play"
-            >
-              {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-white hover:text-white" data-testid="button-video-skip-forward">
-              <SkipForward className="h-3.5 w-3.5" />
-            </Button>
-            <span className="text-xs text-gray-400 ml-1">1:24 / 3:45</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Volume2 className="h-3.5 w-3.5 text-gray-400" />
-            <Settings className="h-3.5 w-3.5 text-gray-400" />
-          </div>
-        </div>
+    <div className="w-full h-72 rounded-md bg-black flex items-center justify-center" data-testid="preview-video">
+      <div className="text-center">
+        <FileIcon type="mp4" size="lg" className="mx-auto mb-2 !text-gray-400" />
+        <p className="text-sm text-gray-300">{file.name}</p>
       </div>
     </div>
   );
 }
 
-function AudioPreview({ file }: { file: FileItem }) {
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(25);
-  const bars = Array.from({ length: 48 }, (_, i) => {
-    const h = Math.sin(i * 0.4) * 30 + Math.random() * 25 + 15;
-    return Math.round(h);
-  });
-
+function AudioPreview({ file, signedUrl }: { file: FileItem; signedUrl: string | null }) {
   return (
     <div className="w-full rounded-md bg-gradient-to-br from-violet-950 to-indigo-950 p-5" data-testid="preview-audio">
       <div className="text-center mb-4">
@@ -130,123 +90,23 @@ function AudioPreview({ file }: { file: FileItem }) {
         <p className="text-sm text-violet-200 font-medium">{file.name}</p>
         <p className="text-xs text-violet-400 mt-0.5">{formatFileSize(file.size)}</p>
       </div>
-      <div className="flex items-end justify-center gap-[2px] h-16 mb-4">
-        {bars.map((h, i) => {
-          const filled = i / bars.length * 100 < progress;
-          return (
-            <div
-              key={i}
-              className={`w-1.5 rounded-full transition-colors ${filled ? "bg-violet-400" : "bg-violet-800"}`}
-              style={{ height: `${h}%` }}
-            />
-          );
-        })}
-      </div>
-      <div className="w-full h-1 bg-violet-800 rounded-full mb-3 cursor-pointer" onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setProgress(Math.round(((e.clientX - rect.left) / rect.width) * 100));
-      }}>
-        <div className="h-full bg-violet-400 rounded-full transition-all" style={{ width: `${progress}%` }} />
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-violet-400">0:58</span>
-        <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-violet-300 hover:text-violet-200" data-testid="button-audio-skip-back">
-            <SkipBack className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 text-violet-200 hover:text-white"
-            onClick={() => setPlaying(!playing)}
-            data-testid="button-audio-play"
-          >
-            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-          </Button>
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-violet-300 hover:text-violet-200" data-testid="button-audio-skip-forward">
-            <SkipForward className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        <span className="text-xs text-violet-400">3:42</span>
-      </div>
+      {signedUrl ? (
+        <audio
+          src={signedUrl}
+          controls
+          className="w-full"
+          data-testid="audio-element"
+        />
+      ) : (
+        <p className="text-center text-xs text-violet-400">Loading audio...</p>
+      )}
     </div>
   );
 }
 
-function DocumentPreview({ file }: { file: FileItem }) {
-  const docContents: Record<string, string[]> = {
-    pdf: [
-      "Section 1: Introduction",
-      "",
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      "",
-      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      "",
-      "Section 2: Background",
-      "",
-      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
-    ],
-    docx: [
-      "Document Title",
-      "",
-      "Author: John Smith",
-      "Date: January 15, 2024",
-      "",
-      "This document provides an overview of the project requirements and milestones. Key deliverables include:",
-      "",
-      "  1. Initial prototype completion",
-      "  2. User testing phase",
-      "  3. Final review and deployment",
-    ],
-    txt: [
-      "Meeting Notes - Q4 Planning",
-      "============================",
-      "",
-      "Attendees: Alice, Bob, Charlie",
-      "",
-      "Action items:",
-      "- Review budget allocation",
-      "- Finalize timeline for launch",
-      "- Schedule follow-up meeting",
-    ],
-    csv: [
-      "Name,Email,Role,Department",
-      "Alice Johnson,alice@example.com,Manager,Engineering",
-      "Bob Smith,bob@example.com,Developer,Engineering",
-      "Charlie Brown,charlie@example.com,Designer,Design",
-      "Diana Prince,diana@example.com,PM,Product",
-      "Eve Adams,eve@example.com,Analyst,Data",
-    ],
-    json: [
-      '{',
-      '  "name": "DriveX",',
-      '  "version": "1.0.0",',
-      '  "description": "Cloud storage application",',
-      '  "features": [',
-      '    "file-management",',
-      '    "sharing",',
-      '    "collaboration"',
-      '  ],',
-      '  "active": true',
-      '}',
-    ],
-    html: [
-      '<!DOCTYPE html>',
-      '<html lang="en">',
-      '<head>',
-      '  <meta charset="UTF-8">',
-      '  <title>My Page</title>',
-      '</head>',
-      '<body>',
-      '  <h1>Hello World</h1>',
-      '  <p>Welcome to our website.</p>',
-      '</body>',
-      '</html>',
-    ],
-  };
-
-  const lines = docContents[file.type] || docContents.txt;
+function DocumentPreview({ file, signedUrl, docContent }: { file: FileItem; signedUrl: string | null; docContent: string | null }) {
   const isCode = ["json", "html", "csv"].includes(file.type);
+  const lines = docContent ? docContent.split("\n") : null;
 
   return (
     <div className="w-full rounded-md border bg-card overflow-hidden" data-testid="preview-document">
@@ -255,14 +115,20 @@ function DocumentPreview({ file }: { file: FileItem }) {
         <span className="text-xs text-muted-foreground font-medium truncate">{file.name}</span>
       </div>
       <div className={`p-4 max-h-64 overflow-y-auto ${isCode ? "font-mono text-xs" : "text-sm"}`}>
-        {lines.map((line, i) => (
-          <div key={i} className="flex gap-3">
-            <span className="text-muted-foreground/40 select-none w-5 text-right flex-shrink-0 text-xs leading-6">{i + 1}</span>
-            <span className={`leading-6 ${line === "" ? "h-6" : ""} ${isCode ? "text-muted-foreground" : ""}`}>
-              {line || "\u00A0"}
-            </span>
-          </div>
-        ))}
+        {lines ? (
+          lines.map((line, i) => (
+            <div key={i} className="flex gap-3">
+              <span className="text-muted-foreground/40 select-none w-5 text-right flex-shrink-0 text-xs leading-6">{i + 1}</span>
+              <span className={`leading-6 ${line === "" ? "h-6" : ""} ${isCode ? "text-muted-foreground" : ""}`}>
+                {line || "\u00A0"}
+              </span>
+            </div>
+          ))
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            {signedUrl ? "Loading content..." : "Preview not available for this file type."}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -271,6 +137,8 @@ function DocumentPreview({ file }: { file: FileItem }) {
 export function PreviewModal({ open, onClose, file, files = [] }: PreviewModalProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentFile, setCurrentFile] = useState<FileItem | null>(file);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [docContent, setDocContent] = useState<string | null>(null);
 
   const navigableFiles = files.filter((f) => f.type !== "folder");
 
@@ -285,8 +153,35 @@ export function PreviewModal({ open, onClose, file, files = [] }: PreviewModalPr
   useEffect(() => {
     if (!open) {
       setIsFullscreen(false);
+      setSignedUrl(null);
+      setDocContent(null);
     }
   }, [open]);
+
+  // Fetch signed URL when current file changes (also updates accessedAt via GET /files/:id)
+  useEffect(() => {
+    if (!currentFile || currentFile.type === "folder") {
+      setSignedUrl(null);
+      setDocContent(null);
+      return;
+    }
+    setSignedUrl(null);
+    setDocContent(null);
+
+    // Update accessedAt by fetching file metadata
+    fileService.getFileById(currentFile.id).catch(() => {});
+
+    const textTypes = ["txt", "csv", "json", "html"];
+    fileService.getDownloadUrl(currentFile.id).then((url) => {
+      setSignedUrl(url);
+      if (textTypes.includes(currentFile.type)) {
+        fetch(url)
+          .then((r) => r.text())
+          .then((text) => setDocContent(text))
+          .catch(() => {});
+      }
+    }).catch(() => {});
+  }, [currentFile?.id]);
 
   const goToPrev = useCallback(() => {
     if (hasPrev) {
@@ -323,11 +218,24 @@ export function PreviewModal({ open, onClose, file, files = [] }: PreviewModalPr
   const isAudio = currentFile.type === "mp3";
   const isDocument = ["pdf", "docx", "txt", "csv", "json", "html"].includes(currentFile.type);
 
+  const handleDownload = async () => {
+    try {
+      const url = signedUrl || await fileService.getDownloadUrl(currentFile.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = currentFile.name;
+      a.click();
+      toast.success("Download started", { description: `Downloading "${currentFile.name}"...` });
+    } catch {
+      toast.error("Download failed", { description: `Could not download "${currentFile.name}".` });
+    }
+  };
+
   const renderPreview = () => {
-    if (isImage) return <ImagePreview file={currentFile} />;
-    if (isVideo) return <VideoPreview file={currentFile} />;
-    if (isAudio) return <AudioPreview file={currentFile} />;
-    if (isDocument) return <DocumentPreview file={currentFile} />;
+    if (isImage) return <ImagePreview file={currentFile} signedUrl={signedUrl} />;
+    if (isVideo) return <VideoPreview file={currentFile} signedUrl={signedUrl} />;
+    if (isAudio) return <AudioPreview file={currentFile} signedUrl={signedUrl} />;
+    if (isDocument) return <DocumentPreview file={currentFile} signedUrl={signedUrl} docContent={docContent} />;
     return (
       <div className="w-full h-48 bg-muted rounded-md flex items-center justify-center">
         <div className="text-center">
@@ -383,7 +291,7 @@ export function PreviewModal({ open, onClose, file, files = [] }: PreviewModalPr
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
-            <Button size="icon" variant="ghost" data-testid="button-preview-download">
+            <Button size="icon" variant="ghost" onClick={handleDownload} data-testid="button-preview-download">
               <Download className="h-4 w-4" />
             </Button>
             <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-preview-close">

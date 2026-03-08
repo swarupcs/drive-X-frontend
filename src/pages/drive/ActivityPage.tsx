@@ -86,9 +86,19 @@ function groupByDate(activities: { timestamp: string }[]): Map<string, typeof ac
 
 const DATE_ORDER = ["Today", "Yesterday", "This week", "Earlier"];
 
+// Map tab keys to single backend action values (undefined = no filter)
+const TAB_ACTION: Record<TabKey, string | undefined> = {
+  all: undefined,
+  uploads: "upload",
+  shares: "share",
+  deletions: undefined, // multiple actions — filter client-side
+  renames: "rename",
+};
+
 export default function ActivityPage() {
-  const { data: activities, isLoading } = useActivityLog(100);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const serverAction = TAB_ACTION[activeTab];
+  const { data: activities, isLoading } = useActivityLog(100, serverAction);
 
   if (isLoading) {
     return (

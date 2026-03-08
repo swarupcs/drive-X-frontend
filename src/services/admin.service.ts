@@ -1,6 +1,15 @@
 import { apiClient, ApiResponse } from './api.client';
 import type { User, FileItem, ShareLink, Activity } from '@/types';
 
+export interface SystemSettings {
+  allowPublicSharing: boolean;
+  allowRegistration: boolean;
+  enableFileVersioning: boolean;
+  defaultStorageQuotaGB: number;
+  bannerMessage: string;
+  showBanner: boolean;
+}
+
 export interface DashboardStats {
   totalUsers: number;
   totalFiles: number;
@@ -62,6 +71,21 @@ export const adminService = {
 
   async getStorageOverview() {
     const res = await apiClient.get('/admin/storage');
+    return res.data;
+  },
+
+  async getSettings(): Promise<SystemSettings> {
+    const res = await apiClient.get<SystemSettings>('/admin/settings');
+    return res.data;
+  },
+
+  async updateSettings(data: Partial<SystemSettings>): Promise<SystemSettings> {
+    const res = await apiClient.patch<SystemSettings>('/admin/settings', data);
+    return res.data;
+  },
+
+  async getBanner(): Promise<{ showBanner: boolean; bannerMessage: string }> {
+    const res = await apiClient.get<{ showBanner: boolean; bannerMessage: string }>('/settings/banner');
     return res.data;
   },
 };

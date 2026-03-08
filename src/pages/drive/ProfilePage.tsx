@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppSelector } from "@/store";
-import { useUpdateProfile } from "@/hooks/api/useMutations";
+import { useUpdateProfile, useChangePassword } from "@/hooks/api/useMutations";
 import { useStorageInfo } from "@/hooks/api/useStorageInfo";
 import { formatFileSize } from "@/utils/formatters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const user = useAppSelector((s) => s.auth.user);
   const { data: storage } = useStorageInfo();
   const updateProfile = useUpdateProfile();
+  const changePasswordMutation = useChangePassword();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -53,18 +54,24 @@ export default function ProfilePage() {
       toast.error("Enter your current password.");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match.");
       return;
     }
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    toast.success("Password changed", { description: "Your password has been updated." });
+    changePasswordMutation.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        },
+      }
+    );
   };
 
   const handleSaveNotifications = () => {
@@ -258,9 +265,9 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
-              <Button onClick={handleChangePassword} variant="outline" data-testid="button-change-password">
+              <Button onClick={handleChangePassword} variant="outline" disabled={changePasswordMutation.isPending} data-testid="button-change-password">
                 <KeyRound className="h-4 w-4 mr-1" />
-                Change Password
+                {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
               </Button>
             </CardContent>
           </Card>

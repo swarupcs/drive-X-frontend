@@ -40,6 +40,19 @@ export function useUpdateProfile() {
   });
 }
 
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      authService.changePassword(data),
+    onSuccess: () => {
+      toast.success("Password changed", { description: "Your password has been updated." });
+    },
+    onError: (err: Error) => {
+      toast.error("Error", { description: err.message });
+    },
+  });
+}
+
 // ===================== FILE MUTATIONS =====================
 
 export function useCreateFolder(parentId: string | null) {
@@ -380,6 +393,21 @@ export function useRevokeShareLink() {
 }
 
 // ===================== ADMIN MUTATIONS =====================
+
+export function useUpdateAdminSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: import("@/services/admin.service").SystemSettings) =>
+      adminService.updateSettings(data),
+    onSuccess: (settings) => {
+      qc.setQueryData(["adminSettings"], settings);
+      toast.success("Settings saved", { description: "System settings have been updated." });
+    },
+    onError: (err: Error) => {
+      toast.error("Error", { description: err.message });
+    },
+  });
+}
 
 export function useAdminUpdateUser() {
   const qc = useQueryClient();

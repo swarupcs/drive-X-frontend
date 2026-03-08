@@ -52,6 +52,26 @@ export function useAdminStorage() {
   });
 }
 
+export function useAdminSettings() {
+  const isAdmin = useAppSelector((s) => s.auth.role === "admin");
+  return useQuery({
+    queryKey: ["adminSettings"],
+    queryFn: () => adminService.getSettings(),
+    enabled: isAdmin,
+    staleTime: 60_000,
+  });
+}
+
+export function useSystemBanner() {
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  return useQuery({
+    queryKey: ["systemBanner"],
+    queryFn: () => adminService.getBanner(),
+    enabled: isAuthenticated,
+    staleTime: 2 * 60_000,
+  });
+}
+
 export const useUsers = useAdminUsers;
 export const useAllFiles = useAdminFiles;
 export const useShareLinks = useAdminShareLinks;

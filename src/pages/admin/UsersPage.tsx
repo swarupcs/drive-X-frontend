@@ -1,19 +1,120 @@
+import { useState, useEffect } from "react";
 import { useUsers } from "@/hooks/api/useAdminData";
-import { useSuspendUser } from "@/hooks/api/useMutations";
+import { useSuspendUser, useAdminUpdateUser } from "@/hooks/api/useMutations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { formatFileSize, formatDate } from "@/utils/formatters";
-import { UserCog, Shield, User, Ban, CheckCircle } from "lucide-react";
+import { UserCog, Shield, User, Ban, CheckCircle, Pencil } from "lucide-react";
+
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  storageUsed: number;
+  storageQuota: number;
+  createdAt: string;
+}
+
+function EditUserModal({
+  user,
+  open,
+  onClose,
+}: {
+  user: AdminUser | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const updateMutation = useAdminUpdateUser();
+  const [role, setRole] = useState(user?.role ?? "user");
+  const [quotaGB, setQuotaGB] = useState(
+    user ? Math.round(user.storageQuota / (1024 * 1024 * 1024)) : 5
+  );
+
+  // Reset form when user changes
+  useEffect(() => {
+    if (user) {
+      setRole(user.role);
+      setQuotaGB(Math.round(user.storageQuota / (1024 * 1024 * 1024)));
+    }
+  }, [user?.id]);
+
+  if (!user) return null;
+
+  const handleSave = () => {
+    updateMutation.mutate(
+      {
+        id: user.id,
+        updates: {
+          role,
+          storageQuota: quotaGB * 1024 * 1024 * 1024,
+        },
+      },
+      { onSuccess: onClose }
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit User</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <p className="text-sm font-medium">{user.name}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger data-testid="select-user-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Storage Quota (GB)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              value={quotaGB}
+              onChange={(e) => setQuotaGB(Number(e.target.value))}
+              data-testid="input-storage-quota"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={updateMutation.isPending} data-testid="button-save-user">
+            {updateMutation.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function UsersPage() {
   const { data: usersResult, isLoading } = useUsers();
   const users = usersResult?.data;
   const suspendMutation = useSuspendUser();
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
 
   if (isLoading) {
     return (
@@ -131,20 +232,30 @@ export default function UsersPage() {
                       {formatDate(user.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant={user.status === "active" ? "destructive" : "default"}
-                        onClick={() =>
-                          suspendMutation.mutate({
-                            id: user.id,
-                            suspended: user.status === "active",
-                          })
-                        }
-                        disabled={suspendMutation.isPending}
-                        data-testid={`button-suspend-${user.id}`}
-                      >
-                        {user.status === "active" ? "Suspend" : "Activate"}
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditUser(user as AdminUser)}
+                          data-testid={`button-edit-${user.id}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={user.status === "active" ? "destructive" : "default"}
+                          onClick={() =>
+                            suspendMutation.mutate({
+                              id: user.id,
+                              suspended: user.status === "active",
+                            })
+                          }
+                          disabled={suspendMutation.isPending}
+                          data-testid={`button-suspend-${user.id}`}
+                        >
+                          {user.status === "active" ? "Suspend" : "Activate"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -153,6 +264,12 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <EditUserModal
+        user={editUser}
+        open={!!editUser}
+        onClose={() => setEditUser(null)}
+      />
     </div>
   );
 }
