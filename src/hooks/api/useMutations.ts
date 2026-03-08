@@ -17,7 +17,7 @@ import { fileService } from "@/services/file.service";
 import { shareService } from "@/services/share.service";
 import { adminService } from "@/services/admin.service";
 import { authService } from "@/services/auth.service";
-import type { FileLabel } from "@/types";
+import type { FileItem, FileLabel } from "@/types";
 
 // ===================== AUTH MUTATIONS =====================
 
@@ -112,12 +112,31 @@ export function useStarItem() {
   return useMutation({
     mutationFn: ({ id, starred }: { id: string; starred: boolean }) =>
       fileService.starFile(id, starred),
+    onMutate: async ({ id, starred }) => {
+      await qc.cancelQueries({ queryKey: ["files"] });
+      await qc.cancelQueries({ queryKey: ["starredFiles"] });
+
+      // Optimistically update all "files" caches
+      qc.setQueriesData<FileItem[]>({ queryKey: ["files"] }, (old) =>
+        old ? old.map((f) => (f.id === id ? { ...f, starred } : f)) : old
+      );
+      // Remove from starred cache instantly when unstarring
+      if (!starred) {
+        qc.setQueryData<FileItem[]>(["starredFiles"], (old) =>
+          old ? old.filter((f) => f.id !== id) : old
+        );
+      }
+    },
     onSuccess: (file, { starred }) => {
       qc.invalidateQueries({ queryKey: ["files"] });
       qc.invalidateQueries({ queryKey: ["starredFiles"] });
-      toast.success(starred ? "Starred" : "Unstarred", { description: `"${file.name}" has been ${starred ? "starred" : "unstarred"}.` });
+      toast.success(starred ? "Starred" : "Unstarred", {
+        description: `"${file.name}" ${starred ? "added to Starred." : "removed from Starred."}`,
+      });
     },
     onError: (err: Error) => {
+      qc.invalidateQueries({ queryKey: ["files"] });
+      qc.invalidateQueries({ queryKey: ["starredFiles"] });
       toast.error("Error", { description: err.message });
     },
   });

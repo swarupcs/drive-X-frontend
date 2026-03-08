@@ -131,10 +131,23 @@ export function DriveLayout({
         const parent = breadcrumbs[breadcrumbs.length - 2];
         navigate(parent.id ? `/drive/folder/${parent.id}` : "/drive");
       }
+      // S → toggle star on selected files (skip when focus is in an input/textarea)
+      if (
+        e.key === "s" &&
+        !e.ctrlKey && !e.metaKey && !e.altKey &&
+        selectedFiles.length > 0 &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
+        for (const id of selectedFiles) {
+          const file = files?.find((f) => f.id === id);
+          if (file) starMutation.mutate({ id, starred: !file.starred });
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedFiles, files, dispatch, trashMutation, breadcrumbs, navigate]);
+  }, [selectedFiles, files, dispatch, trashMutation, starMutation, breadcrumbs, navigate]);
 
   const handleStar = (file: FileItem) => {
     starMutation.mutate({ id: file.id, starred: !file.starred });

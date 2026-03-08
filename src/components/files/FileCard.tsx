@@ -141,12 +141,26 @@ export function FileCard({
           />
         </div>
 
-        {/* Star indicator */}
-        {file.starred && (
-          <div className="absolute right-2 top-2 z-10">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-          </div>
-        )}
+        {/* Star toggle button */}
+        <div
+          className={cn(
+            "absolute right-2 top-2 z-10 transition-opacity duration-150",
+            file.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onStar(file);
+          }}
+        >
+          <Star
+            className={cn(
+              "h-3.5 w-3.5 cursor-pointer transition-colors",
+              file.starred
+                ? "fill-amber-400 text-amber-400 hover:fill-amber-500 hover:text-amber-500"
+                : "text-muted-foreground hover:text-amber-400"
+            )}
+          />
+        </div>
 
         {/* Label dot */}
         {file.label && labelColor && (

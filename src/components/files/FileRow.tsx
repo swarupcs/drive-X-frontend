@@ -152,7 +152,27 @@ export function FileRow({
 
         {/* Status icons */}
         <div className="hidden sm:flex items-center gap-1.5 w-12 justify-end flex-shrink-0">
-          {file.starred && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
+          <button
+            className={cn(
+              "transition-opacity duration-150",
+              file.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStar(file);
+            }}
+            title={file.starred ? "Remove from Starred" : "Add to Starred"}
+            data-testid={`button-star-${file.id}`}
+          >
+            <Star
+              className={cn(
+                "h-3.5 w-3.5 transition-colors",
+                file.starred
+                  ? "fill-amber-400 text-amber-400 hover:fill-amber-500 hover:text-amber-500"
+                  : "text-muted-foreground hover:text-amber-400"
+              )}
+            />
+          </button>
           {file.shared && <Share2 className="h-3.5 w-3.5 text-muted-foreground/60" />}
         </div>
 
