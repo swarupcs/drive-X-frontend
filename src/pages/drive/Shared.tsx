@@ -6,6 +6,7 @@ import { ShareModal } from "@/components/modals/ShareModal";
 import { PreviewModal } from "@/components/modals/PreviewModal";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
+import { fileService } from "@/services/file.service";
 import type { FileItem } from "@/types";
 
 export default function SharedPage() {
@@ -48,11 +49,18 @@ export default function SharedPage() {
           })
         }
         onCopy={() => {}}
-        onDownload={(file) =>
-          toast.success("Download started", {
-            description: `Downloading "${file.name}"...`,
-          })
-        }
+        onDownload={async (file) => {
+          try {
+            const url = await fileService.getDownloadUrl(file.id);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            toast.success("Download started", { description: `Downloading "${file.name}"...` });
+          } catch {
+            toast.error("Download failed", { description: `Could not download "${file.name}".` });
+          }
+        }}
         showSort={false}
       />
 

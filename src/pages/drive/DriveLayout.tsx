@@ -17,6 +17,7 @@ import { FilterChips } from "@/components/shared/FilterChips";
 import { Button } from "@/components/ui/button";
 import { FolderPlus, Upload, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { toast } from "sonner";
+import { fileService } from "@/services/file.service";
 import type { FileItem, FileLabel } from "@/types";
 
 interface DriveLayoutProps {
@@ -161,8 +162,17 @@ export function DriveLayout({
     copyMutation.mutate({ id: file.id, targetFolderId: parentId });
   };
 
-  const handleDownload = (file: FileItem) => {
-    toast.success("Download started", { description: `Downloading "${file.name}"...` });
+  const handleDownload = async (file: FileItem) => {
+    try {
+      const url = await fileService.getDownloadUrl(file.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      toast.success("Download started", { description: `Downloading "${file.name}"...` });
+    } catch {
+      toast.error("Download failed", { description: `Could not download "${file.name}".` });
+    }
   };
 
   const handleDragMove = (fileId: string, targetFolderId: string) => {
@@ -190,9 +200,25 @@ export function DriveLayout({
     dispatch(clearSelection());
   };
 
-  const handleBulkDownload = () => {
-    toast.success("Download started", { description: `Downloading ${selectedFiles.length} files...` });
+  const handleBulkDownload = async () => {
+    const targets = selectedFiles
+      .map((id) => files?.find((f) => f.id === id))
+      .filter((f): f is FileItem => !!f && f.type !== "folder");
     dispatch(clearSelection());
+    for (const file of targets) {
+      try {
+        const url = await fileService.getDownloadUrl(file.id);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+      } catch {
+        toast.error("Download failed", { description: `Could not download "${file.name}".` });
+      }
+    }
+    if (targets.length > 0) {
+      toast.success("Downloads started", { description: `Downloading ${targets.length} file${targets.length !== 1 ? "s" : ""}...` });
+    }
   };
 
   const handleBulkCopy = () => {

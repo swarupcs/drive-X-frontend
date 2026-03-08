@@ -9,6 +9,7 @@ import { PreviewModal } from "@/components/modals/PreviewModal";
 import { Button } from "@/components/ui/button";
 import { Star, StarOff } from "lucide-react";
 import { toast } from "sonner";
+import { fileService } from "@/services/file.service";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { clearSelection } from "@/store/slices/uiSlice";
 import type { FileItem } from "@/types";
@@ -51,8 +52,17 @@ export default function Starred() {
     copyMutation.mutate({ id: file.id, targetFolderId: null });
   };
 
-  const handleDownload = (file: FileItem) => {
-    toast.success("Download started", { description: `Downloading "${file.name}"...` });
+  const handleDownload = async (file: FileItem) => {
+    try {
+      const url = await fileService.getDownloadUrl(file.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      toast.success("Download started", { description: `Downloading "${file.name}"...` });
+    } catch {
+      toast.error("Download failed", { description: `Could not download "${file.name}".` });
+    }
   };
 
   const handleUnstarAll = () => {

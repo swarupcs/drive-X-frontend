@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useAppSelector, useAppDispatch } from "@/store";
-import { setCredentials } from "@/store/slices/authSlice";
+import { useAppSelector } from "@/store";
+import { useUpdateProfile } from "@/hooks/api/useMutations";
 import { useStorageInfo } from "@/hooks/api/useStorageInfo";
 import { formatFileSize } from "@/utils/formatters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,11 +19,9 @@ import { User, Save, Shield, HardDrive, Bell, KeyRound } from "lucide-react";
 
 export default function ProfilePage() {
   const user = useAppSelector((s) => s.auth.user);
-  const token = useAppSelector((s) => s.auth.token);
-  const dispatch = useAppDispatch();
   const { data: storage } = useStorageInfo();
+  const updateProfile = useUpdateProfile();
   const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -46,17 +44,8 @@ export default function ProfilePage() {
     : 0;
 
   const handleSaveProfile = () => {
-    if (!name.trim()) {
-      toast.error("Name cannot be empty.");
-      return;
-    }
-    dispatch(
-      setCredentials({
-        user: { ...user, name: name.trim(), email: email.trim() },
-        token: token || "",
-      })
-    );
-    toast.success("Profile updated", { description: "Your profile has been saved." });
+    if (!name.trim()) return;
+    updateProfile.mutate({ name: name.trim() });
   };
 
   const handleChangePassword = () => {
@@ -164,15 +153,22 @@ export default function ProfilePage() {
                     <Input
                       id="profile-email"
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={user.email}
+                      readOnly
+                      disabled
+                      className="opacity-60 cursor-not-allowed"
                       data-testid="input-profile-email"
                     />
+                    <p className="text-[11px] text-muted-foreground">Email cannot be changed.</p>
                   </div>
                 </div>
-                <Button onClick={handleSaveProfile} data-testid="button-save-profile">
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={updateProfile.isPending || !name.trim() || name.trim() === user.name}
+                  data-testid="button-save-profile"
+                >
                   <Save className="h-4 w-4 mr-1" />
-                  Save Profile
+                  {updateProfile.isPending ? "Saving..." : "Save Profile"}
                 </Button>
               </CardContent>
             </Card>
