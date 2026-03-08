@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
+import { useRef, useCallback } from "react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { logout } from "@/store/slices/authSlice";
+import { useUploadFiles } from "@/hooks/api/useMutations";
 import { StorageBar } from "@/components/shared/StorageBar";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -20,7 +22,6 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useRef } from "react";
 
 const driveNavItems = [
   { title: "My Drive", href: "/drive", icon: HardDrive },
@@ -48,6 +49,22 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentFolderId = useAppSelector((s) => s.ui.currentFolderId);
+  const uploadFiles = useUploadFiles(currentFolderId);
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        uploadFiles(Array.from(e.target.files));
+        e.target.value = "";
+      }
+    },
+    [uploadFiles]
+  );
+
+  const handleNewFolder = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("drivex:new-folder"));
+  }, []);
 
   const initials = user?.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -94,13 +111,19 @@ export function AppSidebar() {
                 <Upload className="mr-2 h-4 w-4" />
                 Upload file
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleNewFolder}>
                 <FolderPlus className="mr-2 h-4 w-4" />
                 New folder
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <input ref={fileInputRef} type="file" multiple className="hidden" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
         </div>
 
         {/* Drive Navigation */}

@@ -105,8 +105,9 @@ export interface UploadItem {
   filename: string;
   size: number;
   progress: number;
-  status: "pending" | "uploading" | "done" | "error";
+  status: "pending" | "uploading" | "done" | "error" | "cancelled";
   folderId: string | null;
+  errorMessage?: string;
 }
 
 export interface Comment {

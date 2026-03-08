@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useAppSelector, useAppDispatch } from "@/store";
-import { clearSelection, setSelectedFiles, toggleFileSelection } from "@/store/slices/uiSlice";
-import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useShareFile, useUploadFile, useCreateFolder, useLabelItem } from "@/hooks/api/useMutations";
+import { clearSelection, setSelectedFiles, setCurrentFolderId } from "@/store/slices/uiSlice";
+import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useShareFile, useUploadFiles, useCreateFolder, useLabelItem } from "@/hooks/api/useMutations";
 import { FileDisplay } from "@/components/files/FileList";
 import { BulkActions } from "@/components/files/BulkActions";
 import { FileDetailsPanel } from "@/components/files/FileDetailsPanel";
@@ -48,6 +48,11 @@ export function DriveLayout({
   const dispatch = useAppDispatch();
   const selectedFiles = useAppSelector((s) => s.ui.selectedFiles);
 
+  // Keep Redux in sync with the current folder so AppSidebar can upload to the right folder
+  useEffect(() => {
+    dispatch(setCurrentFolderId(parentId ?? null));
+  }, [parentId, dispatch]);
+
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [renameFile, setRenameFile] = useState<FileItem | null>(null);
   const [moveFile, setMoveFile] = useState<FileItem | null>(null);
@@ -62,7 +67,7 @@ export function DriveLayout({
   const moveMutation = useMoveItem();
   const copyMutation = useCopyItem();
   const shareMutation = useShareFile();
-  const uploadMutation = useUploadFile(parentId);
+  const uploadFiles = useUploadFiles(parentId);
   const createFolderMutation = useCreateFolder(parentId);
   const labelMutation = useLabelItem();
 
@@ -77,11 +82,9 @@ export function DriveLayout({
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      for (const file of acceptedFiles) {
-        uploadMutation.mutate(file);
-      }
+      if (acceptedFiles.length > 0) uploadFiles(acceptedFiles);
     },
-    [uploadMutation]
+    [uploadFiles]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -89,6 +92,13 @@ export function DriveLayout({
     noClick: true,
     noKeyboard: true,
   });
+
+  // Allow AppSidebar's "New folder" button to open the modal
+  useEffect(() => {
+    const handler = () => setCreateFolderOpen(true);
+    window.addEventListener("drivex:new-folder", handler);
+    return () => window.removeEventListener("drivex:new-folder", handler);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -220,8 +230,8 @@ export function DriveLayout({
                   input.multiple = true;
                   input.onchange = (e) => {
                     const target = e.target as HTMLInputElement;
-                    if (target.files) {
-                      Array.from(target.files).forEach((f) => uploadMutation.mutate(f));
+                    if (target.files && target.files.length > 0) {
+                      uploadFiles(Array.from(target.files));
                     }
                   };
                   input.click();

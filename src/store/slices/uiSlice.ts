@@ -10,6 +10,7 @@ interface UiState {
   sortOrder: SortOrder;
   filterType: FilterType;
   activePanel: string | null;
+  currentFolderId: string | null;
 }
 
 const initialState: UiState = {
@@ -21,6 +22,7 @@ const initialState: UiState = {
   sortOrder: "asc",
   filterType: "all",
   activePanel: null,
+  currentFolderId: null,
 };
 
 const uiSlice = createSlice({
@@ -66,6 +68,9 @@ const uiSlice = createSlice({
     setActivePanel(state, action: PayloadAction<string | null>) {
       state.activePanel = action.payload;
     },
+    setCurrentFolderId(state, action: PayloadAction<string | null>) {
+      state.currentFolderId = action.payload;
+    },
   },
 });
 
@@ -81,5 +86,6 @@ export const {
   setSortOrder,
   setFilterType,
   setActivePanel,
+  setCurrentFolderId,
 } = uiSlice.actions;
 export default uiSlice.reducer;

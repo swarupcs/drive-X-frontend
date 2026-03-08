@@ -115,7 +115,7 @@ class ApiClient {
   }
 
   // For multipart/form-data uploads
-  async uploadFile<T>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
+  async uploadFile<T>(url: string, formData: FormData, onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<ApiResponse<T>> {
     const response = await this.client.post<ApiResponse<T>>(url, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (event) => {
@@ -123,6 +123,7 @@ class ApiClient {
           onProgress(Math.round((event.loaded * 100) / event.total));
         }
       },
+      signal,
     });
     return response.data;
   }

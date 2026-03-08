@@ -1,6 +1,15 @@
+import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { addUpload, updateUploadProgress, setUploadStatus } from "@/store/slices/uploadSlice";
+import {
+  addUpload,
+  updateUploadProgress,
+  setUploadStatus,
+  setUploadError,
+  cancelUpload,
+  uploadAbortControllers,
+  uploadFileStore,
+} from "@/store/slices/uploadSlice";
 import { setCredentials } from "@/store/slices/authSlice";
 import { toast } from "sonner";
 import { generateId } from "@/utils/fileHelpers";
@@ -178,37 +187,112 @@ export function useDeletePermanently() {
   });
 }
 
-export function useUploadFile(parentId: string | null) {
-  const qc = useQueryClient();
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_CONCURRENT_UPLOADS = 3;
+
+async function runUpload(
+  file: File,
+  uploadId: string,
+  parentId: string | null,
+  dispatch: ReturnType<typeof useAppDispatch>
+): Promise<import("@/types").FileItem> {
+  const ctrl = new AbortController();
+  uploadAbortControllers.set(uploadId, ctrl);
+  uploadFileStore.set(uploadId, file);
+
+  dispatch(addUpload({ id: uploadId, filename: file.name, size: file.size, folderId: parentId, progress: 0, status: "pending" }));
+
+  try {
+    const result = await fileService.uploadFile(file, parentId, (progress) => {
+      dispatch(updateUploadProgress({ id: uploadId, progress }));
+    }, ctrl.signal);
+    dispatch(setUploadStatus({ id: uploadId, status: "done" }));
+    uploadAbortControllers.delete(uploadId);
+    return result;
+  } catch (err) {
+    uploadAbortControllers.delete(uploadId);
+    if (ctrl.signal.aborted) {
+      dispatch(cancelUpload(uploadId));
+    } else {
+      dispatch(setUploadError({ id: uploadId, message: err instanceof Error ? err.message : "Upload failed" }));
+    }
+    throw err;
+  }
+}
+
+/** Upload a batch of files with concurrency limit and file-size validation. */
+export function useUploadFiles(parentId: string | null) {
   const dispatch = useAppDispatch();
+  const qc = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (file: File) => {
-      const uploadId = generateId();
-      dispatch(addUpload({ id: uploadId, filename: file.name, size: file.size, folderId: parentId, progress: 0, status: "pending" as const }));
-      dispatch(updateUploadProgress({ id: uploadId, progress: 0 }));
-
-      try {
-        const result = await fileService.uploadFile(file, parentId, (progress) => {
-          dispatch(updateUploadProgress({ id: uploadId, progress }));
-        });
-        dispatch(setUploadStatus({ id: uploadId, status: "done" }));
-        return result;
-      } catch (error) {
-        dispatch(setUploadStatus({ id: uploadId, status: "error" }));
-        throw error;
+  return useCallback(async (files: File[]) => {
+    const toUpload: File[] = [];
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File too large", { description: `"${file.name}" exceeds the 100 MB limit.` });
+      } else {
+        toUpload.push(file);
       }
-    },
-    onSuccess: (file) => {
+    }
+    if (toUpload.length === 0) return;
+
+    const queue = toUpload.map((file) => ({ file, id: generateId() }));
+    let successCount = 0;
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const item = queue.shift();
+        if (!item) break;
+        try {
+          await runUpload(item.file, item.id, parentId, dispatch);
+          successCount++;
+        } catch {
+          // errors handled inside runUpload
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, toUpload.length) }, worker);
+    await Promise.all(workers);
+
+    if (successCount > 0) {
       qc.invalidateQueries({ queryKey: ["files", parentId ?? "root"] });
       qc.invalidateQueries({ queryKey: ["storageInfo"] });
       qc.invalidateQueries({ queryKey: ["recentFiles"] });
-      toast.success("Uploaded", { description: `"${file.name}" uploaded successfully.` });
-    },
-    onError: (err: Error) => {
-      toast.error("Upload failed", { description: err.message });
-    },
-  });
+    }
+  }, [parentId, dispatch, qc]);
+}
+
+/** Retry a previously failed upload. */
+export function useRetryUpload() {
+  const dispatch = useAppDispatch();
+  const qc = useQueryClient();
+
+  return useCallback(async (uploadItem: import("@/types").UploadItem) => {
+    const file = uploadFileStore.get(uploadItem.id);
+    if (!file) {
+      toast.error("Cannot retry", { description: "Original file is no longer available." });
+      return;
+    }
+    // Reset progress
+    dispatch(updateUploadProgress({ id: uploadItem.id, progress: 0 }));
+    dispatch(setUploadStatus({ id: uploadItem.id, status: "pending" }));
+
+    try {
+      await runUpload(file, uploadItem.id, uploadItem.folderId, dispatch);
+      qc.invalidateQueries({ queryKey: ["files", uploadItem.folderId ?? "root"] });
+      qc.invalidateQueries({ queryKey: ["storageInfo"] });
+      qc.invalidateQueries({ queryKey: ["recentFiles"] });
+    } catch {
+      // handled inside runUpload
+    }
+  }, [dispatch, qc]);
+}
+
+/** Single-file upload (kept for backward compat in DriveLayout). */
+export function useUploadFile(parentId: string | null) {
+  const uploadFiles = useUploadFiles(parentId);
+  return { mutate: (file: File) => uploadFiles([file]) };
 }
 
 // ===================== SHARE MUTATIONS =====================

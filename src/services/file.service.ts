@@ -99,12 +99,13 @@ export const fileService = {
   async uploadFile(
     file: File,
     parentId: string | null,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    signal?: AbortSignal
   ): Promise<FileItem> {
     const formData = new FormData();
     formData.append('file', file);
     if (parentId) formData.append('parentId', parentId);
-    const res = await apiClient.uploadFile<FileItem>('/files/upload', formData, onProgress);
+    const res = await apiClient.uploadFile<FileItem>('/files/upload', formData, onProgress, signal);
     return res.data;
   },
 
