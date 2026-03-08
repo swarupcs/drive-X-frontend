@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStarredFiles } from "@/hooks/api/useStarredFiles";
-import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem } from "@/hooks/api/useMutations";
+import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useBulkStar } from "@/hooks/api/useMutations";
 import { FileDisplay } from "@/components/files/FileList";
 import { RenameModal } from "@/components/modals/RenameModal";
 import { MoveModal } from "@/components/modals/MoveModal";
@@ -28,6 +28,7 @@ import {
 export default function Starred() {
   const { data: files, isLoading } = useStarredFiles();
   const starMutation = useStarItem();
+  const bulkStarMutation = useBulkStar();
   const trashMutation = useTrashItem();
   const renameMutation = useRenameItem();
   const moveMutation = useMoveItem();
@@ -66,14 +67,14 @@ export default function Starred() {
   };
 
   const handleUnstarAll = () => {
-    files?.forEach((f) => starMutation.mutate({ id: f.id, starred: false }));
+    if (files && files.length > 0) {
+      bulkStarMutation.mutate({ ids: files.map((f) => f.id), starred: false });
+    }
     dispatch(clearSelection());
   };
 
   const handleBulkUnstar = () => {
-    for (const id of selectedFiles) {
-      starMutation.mutate({ id, starred: false });
-    }
+    bulkStarMutation.mutate({ ids: selectedFiles, starred: false });
     dispatch(clearSelection());
   };
 

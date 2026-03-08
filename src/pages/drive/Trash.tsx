@@ -1,5 +1,5 @@
 import { useTrashFiles } from "@/hooks/api/useTrashFiles";
-import { useRestoreItem, useDeleteItem } from "@/hooks/api/useMutations";
+import { useRestoreItem, useDeleteItem, useBulkRestore } from "@/hooks/api/useMutations";
 import { FileDisplay } from "@/components/files/FileList";
 import { Button } from "@/components/ui/button";
 import { Trash2, AlertTriangle, RotateCcw } from "lucide-react";
@@ -27,6 +27,7 @@ export default function TrashPage() {
   const { data: files, isLoading } = useTrashFiles();
   const restoreMutation = useRestoreItem();
   const deleteMutation = useDeleteItem();
+  const bulkRestoreMutation = useBulkRestore();
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const selectedFiles = useAppSelector((s) => s.ui.selectedFiles);
   const dispatch = useAppDispatch();
@@ -40,9 +41,7 @@ export default function TrashPage() {
   };
 
   const handleBulkRestore = () => {
-    for (const id of selectedFiles) {
-      restoreMutation.mutate(id);
-    }
+    bulkRestoreMutation.mutate(selectedFiles);
     dispatch(clearSelection());
   };
 

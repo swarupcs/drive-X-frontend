@@ -72,6 +72,8 @@ export function DriveLayout({
   const uploadFiles = useUploadFiles(parentId);
   const createFolderMutation = useCreateFolder(parentId);
   const labelMutation = useLabelItem();
+  const bulkTrashMutation = useBulkTrash();
+  const bulkStarMutation = useBulkStar();
 
   useEffect(() => {
     if (selectedFiles.length === 1 && files) {
@@ -187,16 +189,12 @@ export function DriveLayout({
   };
 
   const handleBulkStar = () => {
-    for (const id of selectedFiles) {
-      starMutation.mutate({ id, starred: true });
-    }
+    bulkStarMutation.mutate({ ids: selectedFiles, starred: true });
     dispatch(clearSelection());
   };
 
   const handleBulkTrash = () => {
-    for (const id of selectedFiles) {
-      trashMutation.mutate(id);
-    }
+    bulkTrashMutation.mutate(selectedFiles);
     dispatch(clearSelection());
   };
 
