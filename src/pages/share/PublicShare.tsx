@@ -162,11 +162,24 @@ export default function PublicShare({ linkId }: PublicShareProps) {
 
             <Button
               className="w-full gap-2"
-              onClick={() =>
+              onClick={async () => {
+                try {
+                  const url = await shareService.getPublicDownloadUrl(linkId);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = link!.fileName;
+                  a.click();
+                } catch {
+                  // Fallback to direct download endpoint
+                  const a = document.createElement("a");
+                  a.href = shareService.getPublicDownloadFallbackUrl(linkId);
+                  a.download = link!.fileName;
+                  a.click();
+                }
                 toast.success("Download started", {
                   description: `Downloading "${link!.fileName}"...`,
-                })
-              }
+                });
+              }}
               data-testid="button-download-share"
             >
               <Download className="h-4 w-4" />

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useDropzone } from "react-dropzone";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { clearSelection, setSelectedFiles, setCurrentFolderId } from "@/store/slices/uiSlice";
-import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useShareFile, useUploadFiles, useCreateFolder, useLabelItem } from "@/hooks/api/useMutations";
+import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useUploadFiles, useCreateFolder, useLabelItem } from "@/hooks/api/useMutations";
 import { FileDisplay } from "@/components/files/FileList";
 import { BulkActions } from "@/components/files/BulkActions";
 import { FileDetailsPanel } from "@/components/files/FileDetailsPanel";
@@ -68,7 +68,6 @@ export function DriveLayout({
   const renameMutation = useRenameItem();
   const moveMutation = useMoveItem();
   const copyMutation = useCopyItem();
-  const shareMutation = useShareFile();
   const uploadFiles = useUploadFiles(parentId);
   const createFolderMutation = useCreateFolder(parentId);
   const labelMutation = useLabelItem();
@@ -339,12 +338,6 @@ export function DriveLayout({
         open={!!shareFile}
         onClose={() => setShareFile(null)}
         file={shareFile}
-        onShare={(fileId, users) => {
-          if (users.length > 0) {
-            const lastUser = users[users.length - 1];
-            shareMutation.mutate({ fileId, emails: [lastUser.email], permission: lastUser.permission });
-          }
-        }}
       />
 
       <PreviewModal
