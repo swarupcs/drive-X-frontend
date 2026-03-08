@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useDropzone } from "react-dropzone";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { clearSelection, setSelectedFiles, setCurrentFolderId } from "@/store/slices/uiSlice";
@@ -47,6 +48,7 @@ export function DriveLayout({
 }: DriveLayoutProps) {
   const dispatch = useAppDispatch();
   const selectedFiles = useAppSelector((s) => s.ui.selectedFiles);
+  const [, navigate] = useLocation();
 
   // Keep Redux in sync with the current folder so AppSidebar can upload to the right folder
   useEffect(() => {
@@ -124,10 +126,16 @@ export function DriveLayout({
         e.preventDefault();
         setDetailsOpen((prev) => !prev);
       }
+      // Alt+ArrowUp → navigate to parent folder
+      if (e.key === "ArrowUp" && e.altKey && breadcrumbs && breadcrumbs.length >= 2) {
+        e.preventDefault();
+        const parent = breadcrumbs[breadcrumbs.length - 2];
+        navigate(parent.id ? `/drive/folder/${parent.id}` : "/drive");
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedFiles, files, dispatch, trashMutation]);
+  }, [selectedFiles, files, dispatch, trashMutation, breadcrumbs, navigate]);
 
   const handleStar = (file: FileItem) => {
     starMutation.mutate({ id: file.id, starred: !file.starred });

@@ -35,6 +35,7 @@ export function FileRow({
   const selectedFiles = useAppSelector((s) => s.ui.selectedFiles);
   const isSelected = selectedFiles.includes(file.id);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleOpen = () => {
     if (file.type === "folder") {
@@ -47,7 +48,10 @@ export function FileRow({
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", file.id);
     e.dataTransfer.effectAllowed = "move";
+    setIsDragging(true);
   };
+
+  const handleDragEnd = () => setIsDragging(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (file.type === "folder") {
@@ -93,12 +97,14 @@ export function FileRow({
           "border-b border-border/40 last:border-0",
           "transition-colors duration-100",
           isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/40",
-          isDragOver && "bg-primary/10 ring-1 ring-primary ring-inset"
+          isDragOver && "bg-primary/10 ring-1 ring-primary ring-inset",
+          isDragging && "opacity-50"
         )}
         onClick={onClick}
         onDoubleClick={handleOpen}
         draggable
         onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
