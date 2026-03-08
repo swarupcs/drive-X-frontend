@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { toggleFileSelection } from "@/store/slices/uiSlice";
-import { Star, Share2 } from "lucide-react";
+import { Star, Share2, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileIcon } from "./FileIcon";
 import { FileContextMenu, LABEL_COLORS } from "./FileContextMenu";
 import { cn } from "@/lib/utils";
-import { formatFileSize, formatDate } from "@/utils/formatters";
+import { formatFileSize, formatDate, getDaysUntilDeletion } from "@/utils/formatters";
 import type { FileItem, FileLabel } from "@/types";
 
 interface FileRowProps {
@@ -24,11 +24,13 @@ interface FileRowProps {
   onDragMove?: (fileId: string, targetFolderId: string) => void;
   onClick?: (e: React.MouseEvent) => void;
   onLabel?: (file: FileItem, label: FileLabel | null) => void;
+  onRestore?: (file: FileItem) => void;
+  isTrashView?: boolean;
 }
 
 export function FileRow({
   file, onRename, onMove, onShare, onPreview, onStar, onTrash, onCopy,
-  onDownload, onDetails, onDragMove, onClick, onLabel,
+  onDownload, onDetails, onDragMove, onClick, onLabel, onRestore, isTrashView,
 }: FileRowProps) {
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
@@ -89,7 +91,9 @@ export function FileRow({
       onShare={() => onShare(file)}
       onDownload={() => onDownload(file)}
       onTrash={() => onTrash(file)}
+      onRestore={onRestore ? () => onRestore(file) : undefined}
       onLabel={onLabel ? (label) => onLabel(file, label) : undefined}
+      isTrashView={isTrashView}
     >
       <div
         className={cn(
@@ -157,9 +161,20 @@ export function FileRow({
           {file.ownerName}
         </span>
 
-        {/* Modified */}
+        {/* Modified / Days remaining */}
         <div className="hidden md:block w-32 flex-shrink-0">
-          <span className="text-xs text-muted-foreground">{formatDate(file.updatedAt)}</span>
+          {isTrashView && file.trashedAt ? (
+            (() => {
+              const days = getDaysUntilDeletion(file.trashedAt);
+              return (
+                <span className={cn("text-xs", days <= 7 ? "text-destructive font-medium" : "text-muted-foreground")}>
+                  {days === 0 ? "Deletes today" : `${days}d left`}
+                </span>
+              );
+            })()
+          ) : (
+            <span className="text-xs text-muted-foreground">{formatDate(file.updatedAt)}</span>
+          )}
         </div>
 
         {/* Size */}
@@ -169,7 +184,25 @@ export function FileRow({
           </span>
         </div>
 
-        {onDetails && (
+        {/* Trash-view inline restore button */}
+        {isTrashView && onRestore && (
+          <button
+            className={cn(
+              "p-1 rounded transition-opacity text-muted-foreground hover:text-foreground flex-shrink-0",
+              "opacity-0 group-hover:opacity-100"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRestore(file);
+            }}
+            title="Restore"
+            data-testid={`button-restore-${file.id}`}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {!isTrashView && onDetails && (
           <button
             className={cn(
               "p-1 rounded transition-opacity text-muted-foreground hover:text-foreground flex-shrink-0",

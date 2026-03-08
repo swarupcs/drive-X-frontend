@@ -24,6 +24,8 @@ interface FileListProps {
   onDetails?: (file: FileItem) => void;
   onDragMove?: (fileId: string, targetFolderId: string) => void;
   onLabel?: (file: FileItem, label: FileLabel | null) => void;
+  onRestore?: (file: FileItem) => void;
+  isTrashView?: boolean;
   showSort?: boolean;
 }
 
@@ -67,6 +69,8 @@ export function FileDisplay({
   onDetails,
   onDragMove,
   onLabel,
+  onRestore,
+  isTrashView,
   showSort = true,
 }: FileListProps) {
   const { viewMode, sortBy, sortOrder, filterType, selectedFiles } = useAppSelector((s) => s.ui);
@@ -142,6 +146,8 @@ export function FileDisplay({
     onDetails,
     onDragMove,
     onLabel,
+    onRestore,
+    isTrashView,
   };
 
   if (viewMode === "grid") {

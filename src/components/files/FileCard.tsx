@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { FileIcon, getFileBgGradient } from "./FileIcon";
 import { FileContextMenu, LABEL_COLORS } from "./FileContextMenu";
 import { cn } from "@/lib/utils";
-import { formatFileSize, formatRelativeDate } from "@/utils/formatters";
+import { formatFileSize, formatRelativeDate, getDaysUntilDeletion } from "@/utils/formatters";
 import type { FileItem, FileLabel } from "@/types";
 
 const labelNames: Record<string, string> = {
@@ -30,11 +30,13 @@ interface FileCardProps {
   onDragMove?: (fileId: string, targetFolderId: string) => void;
   onClick?: (e: React.MouseEvent) => void;
   onLabel?: (file: FileItem, label: FileLabel | null) => void;
+  onRestore?: (file: FileItem) => void;
+  isTrashView?: boolean;
 }
 
 export function FileCard({
   file, onRename, onMove, onShare, onPreview, onStar, onTrash, onCopy,
-  onDownload, onDetails, onDragMove, onClick, onLabel,
+  onDownload, onDetails, onDragMove, onClick, onLabel, onRestore, isTrashView,
 }: FileCardProps) {
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
@@ -97,7 +99,9 @@ export function FileCard({
       onShare={() => onShare(file)}
       onDownload={() => onDownload(file)}
       onTrash={() => onTrash(file)}
+      onRestore={onRestore ? () => onRestore(file) : undefined}
       onLabel={onLabel ? (label) => onLabel(file, label) : undefined}
+      isTrashView={isTrashView}
     >
       <div
         className={cn(
@@ -191,9 +195,20 @@ export function FileCard({
             {file.name}
           </p>
           <div className="flex items-center justify-between gap-1">
-            <p className="truncate text-[11px] text-muted-foreground">
-              {file.type === "folder" ? formatRelativeDate(file.updatedAt) : formatFileSize(file.size)}
-            </p>
+            {isTrashView && file.trashedAt ? (
+              (() => {
+                const days = getDaysUntilDeletion(file.trashedAt);
+                return (
+                  <p className={cn("truncate text-[11px]", days <= 7 ? "text-destructive font-medium" : "text-muted-foreground")}>
+                    {days === 0 ? "Deletes today" : `${days}d left`}
+                  </p>
+                );
+              })()
+            ) : (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {file.type === "folder" ? formatRelativeDate(file.updatedAt) : formatFileSize(file.size)}
+              </p>
+            )}
             {file.shared && (
               <Share2 className="h-3 w-3 flex-shrink-0 text-muted-foreground/60" />
             )}
