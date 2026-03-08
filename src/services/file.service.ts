@@ -169,4 +169,19 @@ export const fileService = {
     const res = await apiClient.get<{ url: string }>(`/files/${id}/download`);
     return res.data.url;
   },
+
+  async bulkTrash(ids: string[]): Promise<FileItem[]> {
+    const res = await apiClient.post<FileItem[]>('/files/bulk/trash', { ids });
+    return res.data;
+  },
+
+  async bulkRestore(ids: string[]): Promise<FileItem[]> {
+    const res = await apiClient.post<FileItem[]>('/files/bulk/restore', { ids });
+    return res.data;
+  },
+
+  async bulkStar(ids: string[], starred: boolean): Promise<FileItem[]> {
+    const res = await apiClient.post<FileItem[]>('/files/bulk/star', { ids, starred });
+    return res.data;
+  },
 };

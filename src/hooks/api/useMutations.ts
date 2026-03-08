@@ -40,6 +40,22 @@ export function useUpdateProfile() {
   });
 }
 
+export function useUpdateNotificationPreferences() {
+  const dispatch = useAppDispatch();
+  const token = useAppSelector((s) => s.auth.token);
+  return useMutation({
+    mutationFn: (data: { notifyUploads?: boolean; notifyShares?: boolean; notifyComments?: boolean; emailDigest?: 'never' | 'daily' | 'weekly' | 'monthly' }) =>
+      authService.updateNotificationPreferences(data),
+    onSuccess: (user) => {
+      if (token) dispatch(setCredentials({ user, token }));
+      toast.success("Notifications updated", { description: "Your preferences have been saved." });
+    },
+    onError: (err: Error) => {
+      toast.error("Error", { description: err.message });
+    },
+  });
+}
+
 export function useChangePassword() {
   return useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
@@ -178,7 +194,19 @@ export function useTrashItem() {
       qc.invalidateQueries({ queryKey: ["starredFiles"] });
       toast.success("Moved to trash", {
         description: `"${file.name}" moved to trash.`,
-        action: { label: "Undo", onClick: () => {} },
+        action: {
+          label: "Undo",
+          onClick: () => {
+            fileService.restoreFile(file.id).then(() => {
+              qc.invalidateQueries({ queryKey: ["files"] });
+              qc.invalidateQueries({ queryKey: ["trashFiles"] });
+              qc.invalidateQueries({ queryKey: ["starredFiles"] });
+              toast.success("Restored", { description: `"${file.name}" has been restored.` });
+            }).catch(() => {
+              toast.error("Restore failed", { description: `Could not restore "${file.name}".` });
+            });
+          },
+        },
       });
     },
     onError: (err: Error) => {
@@ -325,6 +353,47 @@ export function useRetryUpload() {
 export function useUploadFile(parentId: string | null) {
   const uploadFiles = useUploadFiles(parentId);
   return { mutate: (file: File) => uploadFiles([file]) };
+}
+
+export function useBulkTrash() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => fileService.bulkTrash(ids),
+    onSuccess: (files) => {
+      qc.invalidateQueries({ queryKey: ["files"] });
+      qc.invalidateQueries({ queryKey: ["trashFiles"] });
+      qc.invalidateQueries({ queryKey: ["starredFiles"] });
+      toast.success(`Moved ${files.length} item${files.length !== 1 ? "s" : ""} to trash`);
+    },
+    onError: (err: Error) => toast.error("Error", { description: err.message }),
+  });
+}
+
+export function useBulkRestore() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => fileService.bulkRestore(ids),
+    onSuccess: (files) => {
+      qc.invalidateQueries({ queryKey: ["files"] });
+      qc.invalidateQueries({ queryKey: ["trashFiles"] });
+      toast.success(`Restored ${files.length} item${files.length !== 1 ? "s" : ""}`);
+    },
+    onError: (err: Error) => toast.error("Error", { description: err.message }),
+  });
+}
+
+export function useBulkStar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ids, starred }: { ids: string[]; starred: boolean }) =>
+      fileService.bulkStar(ids, starred),
+    onSuccess: (files, { starred }) => {
+      qc.invalidateQueries({ queryKey: ["files"] });
+      qc.invalidateQueries({ queryKey: ["starredFiles"] });
+      toast.success(starred ? `Starred ${files.length} items` : `Unstarred ${files.length} items`);
+    },
+    onError: (err: Error) => toast.error("Error", { description: err.message }),
+  });
 }
 
 // ===================== SHARE MUTATIONS =====================

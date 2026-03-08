@@ -38,8 +38,8 @@ export default function SharedPage() {
         isLoading={isLoading}
         emptyMessage="Nothing shared with you yet"
         emptyDescription="Files that others share with you will appear here."
-        onRename={() => {}}
-        onMove={() => {}}
+        onRename={() => toast.error("Cannot rename shared files", { description: "You can only rename files you own." })}
+        onMove={() => toast.error("Cannot move shared files", { description: "You can only move files you own." })}
         onShare={setShareFile}
         onPreview={setPreviewFile}
         onStar={handleStar}
@@ -48,7 +48,7 @@ export default function SharedPage() {
             description: "You can only trash files you own.",
           })
         }
-        onCopy={() => {}}
+        onCopy={() => toast.error("Cannot copy shared files", { description: "You can only copy files you own." })}
         onDownload={async (file) => {
           try {
             const url = await fileService.getDownloadUrl(file.id);

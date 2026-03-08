@@ -169,16 +169,18 @@ export default function PublicShare({ linkId }: PublicShareProps) {
                   a.href = url;
                   a.download = link!.fileName;
                   a.click();
+                  toast.success("Download started", { description: `Downloading "${link!.fileName}"...` });
                 } catch {
-                  // Fallback to direct download endpoint
-                  const a = document.createElement("a");
-                  a.href = shareService.getPublicDownloadFallbackUrl(linkId);
-                  a.download = link!.fileName;
-                  a.click();
+                  try {
+                    const a = document.createElement("a");
+                    a.href = shareService.getPublicDownloadFallbackUrl(linkId);
+                    a.download = link!.fileName;
+                    a.click();
+                    toast.success("Download started", { description: `Downloading "${link!.fileName}"...` });
+                  } catch {
+                    toast.error("Download failed", { description: "Could not download the file. The link may have expired." });
+                  }
                 }
-                toast.success("Download started", {
-                  description: `Downloading "${link!.fileName}"...`,
-                });
               }}
               data-testid="button-download-share"
             >

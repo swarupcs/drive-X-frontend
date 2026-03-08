@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppSelector } from "@/store";
-import { useUpdateProfile, useChangePassword } from "@/hooks/api/useMutations";
+import { useUpdateProfile, useChangePassword, useUpdateNotificationPreferences } from "@/hooks/api/useMutations";
 import { useStorageInfo } from "@/hooks/api/useStorageInfo";
 import { formatFileSize } from "@/utils/formatters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,15 +22,17 @@ export default function ProfilePage() {
   const { data: storage } = useStorageInfo();
   const updateProfile = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
+  const notifMutation = useUpdateNotificationPreferences();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [notifyUploads, setNotifyUploads] = useState(true);
-  const [notifyShares, setNotifyShares] = useState(true);
-  const [notifyComments, setNotifyComments] = useState(false);
-  const [emailDigest, setEmailDigest] = useState("weekly");
+  const prefs = (user as any)?.notificationPreferences;
+  const [notifyUploads, setNotifyUploads] = useState(prefs?.notifyUploads ?? true);
+  const [notifyShares, setNotifyShares] = useState(prefs?.notifyShares ?? true);
+  const [notifyComments, setNotifyComments] = useState(prefs?.notifyComments ?? false);
+  const [emailDigest, setEmailDigest] = useState<string>(prefs?.emailDigest ?? "weekly");
 
   if (!user) return null;
 
@@ -75,7 +77,12 @@ export default function ProfilePage() {
   };
 
   const handleSaveNotifications = () => {
-    toast.success("Notifications updated", { description: "Your notification preferences have been saved." });
+    notifMutation.mutate({
+      notifyUploads,
+      notifyShares,
+      notifyComments,
+      emailDigest: emailDigest as 'never' | 'daily' | 'weekly' | 'monthly',
+    });
   };
 
   return (
@@ -346,9 +353,9 @@ export default function ProfilePage() {
                 </Select>
               </div>
 
-              <Button onClick={handleSaveNotifications} data-testid="button-save-notifications">
+              <Button onClick={handleSaveNotifications} disabled={notifMutation.isPending} data-testid="button-save-notifications">
                 <Save className="h-4 w-4 mr-1" />
-                Save Preferences
+                {notifMutation.isPending ? "Saving..." : "Save Preferences"}
               </Button>
             </CardContent>
           </Card>

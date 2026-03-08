@@ -49,6 +49,16 @@ export const authService = {
     await apiClient.patch('/auth/me/password', data);
   },
 
+  async updateNotificationPreferences(data: {
+    notifyUploads?: boolean;
+    notifyShares?: boolean;
+    notifyComments?: boolean;
+    emailDigest?: 'never' | 'daily' | 'weekly' | 'monthly';
+  }): Promise<Omit<User, 'password'>> {
+    const res = await apiClient.patch<Omit<User, 'password'>>('/auth/me/preferences', data);
+    return res.data;
+  },
+
   async logout(): Promise<void> {
     await apiClient.post('/auth/logout');
   },

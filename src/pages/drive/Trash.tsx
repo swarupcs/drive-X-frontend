@@ -8,6 +8,8 @@ import { PreviewModal } from "@/components/modals/PreviewModal";
 import { getDaysUntilDeletion } from "@/utils/formatters";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { clearSelection } from "@/store/slices/uiSlice";
+import { fileService } from "@/services/file.service";
+import { toast } from "sonner";
 import type { FileItem } from "@/types";
 import {
   AlertDialog,
@@ -43,6 +45,24 @@ export default function TrashPage() {
     }
     dispatch(clearSelection());
   };
+
+  const handleDownload = async (file: FileItem) => {
+    try {
+      const url = await fileService.getDownloadUrl(file.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      toast.success("Download started", { description: `Downloading "${file.name}"...` });
+    } catch {
+      toast.error("Download failed", { description: `Could not download "${file.name}".` });
+    }
+  };
+
+  const trashOnlyToast = (action: string) =>
+    toast.error(`Cannot ${action} in trash`, {
+      description: "Restore the file first to perform this action.",
+    });
 
   const urgentFiles = files?.filter(
     (f) => f.trashedAt && getDaysUntilDeletion(f.trashedAt) <= 7
@@ -138,15 +158,15 @@ export default function TrashPage() {
         isLoading={isLoading}
         emptyMessage="Trash is empty"
         emptyDescription="Items you delete will appear here for 30 days before permanent deletion."
-        onRename={() => {}}
-        onMove={() => {}}
-        onShare={() => {}}
+        onRename={() => trashOnlyToast("rename")}
+        onMove={() => trashOnlyToast("move")}
+        onShare={() => trashOnlyToast("share")}
         onPreview={setPreviewFile}
-        onStar={() => {}}
+        onStar={() => trashOnlyToast("star")}
         onTrash={handleDelete}
         onRestore={handleRestore}
-        onCopy={() => {}}
-        onDownload={() => {}}
+        onCopy={() => trashOnlyToast("copy")}
+        onDownload={handleDownload}
         isTrashView
         showSort={false}
       />

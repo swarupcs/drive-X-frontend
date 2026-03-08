@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useDropzone } from "react-dropzone";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { clearSelection, setSelectedFiles, setCurrentFolderId } from "@/store/slices/uiSlice";
-import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useUploadFiles, useCreateFolder, useLabelItem } from "@/hooks/api/useMutations";
+import { useStarItem, useTrashItem, useRenameItem, useMoveItem, useCopyItem, useUploadFiles, useCreateFolder, useLabelItem, useBulkTrash, useBulkStar } from "@/hooks/api/useMutations";
 import { FileDisplay } from "@/components/files/FileList";
 import { BulkActions } from "@/components/files/BulkActions";
 import { FileDetailsPanel } from "@/components/files/FileDetailsPanel";

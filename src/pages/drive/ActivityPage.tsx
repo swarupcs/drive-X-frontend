@@ -50,14 +50,6 @@ const actionColors: Record<string, string> = {
 
 type TabKey = "all" | "uploads" | "shares" | "deletions" | "renames";
 
-const TAB_FILTER: Record<TabKey, string[]> = {
-  all: [],
-  uploads: ["upload"],
-  shares: ["share"],
-  deletions: ["delete", "trash"],
-  renames: ["rename"],
-};
-
 function groupByDate(activities: { timestamp: string }[]): Map<string, typeof activities> {
   const groups = new Map<string, typeof activities>();
   const today = new Date();
@@ -86,12 +78,12 @@ function groupByDate(activities: { timestamp: string }[]): Map<string, typeof ac
 
 const DATE_ORDER = ["Today", "Yesterday", "This week", "Earlier"];
 
-// Map tab keys to single backend action values (undefined = no filter)
+// Map tab keys to backend action filter values (comma-separated for multi-action)
 const TAB_ACTION: Record<TabKey, string | undefined> = {
   all: undefined,
   uploads: "upload",
   shares: "share",
-  deletions: undefined, // multiple actions — filter client-side
+  deletions: "delete,trash",
   renames: "rename",
 };
 
@@ -112,11 +104,7 @@ export default function ActivityPage() {
     );
   }
 
-  const filterActions = TAB_FILTER[activeTab];
-  const filtered =
-    filterActions.length === 0
-      ? activities || []
-      : (activities || []).filter((a: any) => filterActions.includes(a.action));
+  const filtered = activities || [];
 
   const grouped = groupByDate(filtered);
   const orderedKeys = DATE_ORDER.filter((k) => grouped.has(k));
